@@ -4,7 +4,6 @@ import time
 import string
 import logging
 import os
-import asyncio
 from g4f.client import Client
 
 client = Client()
@@ -27,9 +26,9 @@ session = scratch3.login("LifeCoderBoy", psw)
 conn = session.connect_cloud(1053091510)
 events = scratch3.CloudEvents(1053091510)
 
-async def post_to_blackbox(msgs):
+def post_to_blackbox(msgs):
     try:
-        chat_completion = await client.chat.completions.create(
+        chat_completion = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=msgs,
         )
@@ -72,12 +71,6 @@ def handle_response(response, prefix):
         conn.set_var("done", "1")
     time.sleep(0.5)
 
-def reset_counts():
-    global trials, followed_users
-    trials = {}
-    followed_users = {}
-    logging.info("Message counts have been reset.")
-
 def parse_command(command):
     parts = command.split()
     if len(parts) < 3:
@@ -116,7 +109,7 @@ def parse_command(command):
     return "Invalid command or status."
 
 @events.event
-async def on_set(event):
+def on_set(event):
     user = scratch3.get_user(event.user)
     is_following = user.is_following("LifeCoderBoy")
     
@@ -138,7 +131,7 @@ async def on_set(event):
         
         msgs.append({"id": "rpxT3OX", "content": f"{event.user} says: {message}", "role": "user"})
         print("----------OVER HERE----------------")
-        response = await post_to_blackbox(msgs)
+        response = post_to_blackbox(msgs)
         print("----------CAME UP TILL HERE----------------")
         if user.username in bypass_users:
             logging.info(f"{event.user} bypassed the limit.")
@@ -170,18 +163,3 @@ async def on_set(event):
                 split_string(f"{event.user} has used their Neuron trial. Follow @LifeCoderBoy to send up to 15 messages/day (You'll automatically be able to use Neuron again when you've followed). Other people can continue to use Neuron")
                 conn.set_var("done", "1")
                 time.sleep(0.5)
-
-async def main():
-    try:
-        # Start handling Scratch events
-        await events.start()
-    except KeyboardInterrupt:
-        logging.info("Event handling interrupted.")
-    finally:
-        logging.info("Stopping event handling...")
-        await events.stop()
-        logging.info("Event handling stopped.")
-
-# Run the event loop
-if __name__ == "__main__":
-    asyncio.run(main())
