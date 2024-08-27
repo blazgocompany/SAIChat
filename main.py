@@ -1,10 +1,11 @@
 import scratchattach as scratch3
-import requests
 import random
 import time
 import string
 import logging
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from g4f.client import Client
 
 client = Client()
@@ -23,9 +24,12 @@ def gen_7_digit():
 psw = os.getenv('SECRET')
 msgs = [{"id":"rpxT3Os","content":"You are Neuron, an assistant to talk with the group. You are NEURON, not SOME OTHER USER; DO NOT act like you are someone else, your role is the assistant. DO NOT make large responses.", "role":"user"}]
 
-session = scratch3.login("LifeCoderBoy", psw)
-conn = session.connect_cloud(1053091510)
-events = scratch3.CloudEvents(1053091510)
+# Setup synchronous environment
+executor = ThreadPoolExecutor()
+
+def run_in_executor(func, *args):
+    loop = asyncio.get_event_loop()
+    return loop.run_in_executor(executor, func, *args)
 
 def split_string(s):
     n = len(s)
@@ -40,34 +44,31 @@ def split_string(s):
             end += remaining_chars
         chunk = s[start:end]
         chunks.append(chunk)
-        conn.set_var(f"res{i}", scratch3.Encoding.encode(chunk))
+        run_in_executor(conn.set_var, f"res{i}", scratch3.Encoding.encode(chunk))
     return chunks
 
-def post_to_blackbox(msgs):
-    chat_completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=msgs,
-    )
-    print("----------SENDING!----------------")
-    return chat_completion.choices[0].message.content or ""
-
 def handle_response(response, prefix):
-    response_text = response.text.split("$@$")[2]
+    response_text = response.split("$@$")[2] if "$@$" in response else response
     if len(response_text) < 1020:
-        conn.set_var("done", "0")
+        run_in_executor(conn.set_var, "done", "0")
         split_string(f"Neuron{prefix}: {response_text}")
-        conn.set_var("done", "1")
+        run_in_executor(conn.set_var, "done", "1")
     else:
         logging.info("Response too long, splitting into chunks")
-        conn.set_var("done", "0")
+        run_in_executor(conn.set_var, "done", "0")
         split_string(f"Neuron{prefix}: {response_text[:len(response_text)//2]}")
-        conn.set_var("done", "1")
+        run_in_executor(conn.set_var, "done", "1")
         time.sleep(2)
-        conn.set_var("done", "0")
+        run_in_executor(conn.set_var, "done", "0")
         split_string(response_text[len(response_text)//2:])
-        conn.set_var("done", "1")
+        run_in_executor(conn.set_var, "done", "1")
     time.sleep(0.5)
 
+def reset_counts():
+    global trials, followed_users
+    trials = {}
+    followed_users = {}
+    logging.info("Message counts have been reset.")
 
 def parse_command(command):
     parts = command.split()
@@ -80,11 +81,12 @@ def parse_command(command):
     if action == "/reset":
         if parts[1] == "all":
             reset_counts()
-            msgs = {}
+            global msgs
+            msgs = []
         elif parts[1] == "usage":
             reset_counts()
         elif parts[1] == "messages":
-            msgs = {}
+            msgs = []
 
     if action == "/upgrade" and status == "bypass":
         bypass_users.add(user)
@@ -105,8 +107,19 @@ def parse_command(command):
     
     return "Invalid command or status."
 
-@events.event
-def on_set(event):
+async def post_to_blackbox(msgs):
+    try:
+        chat_completion = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=msgs,
+        )
+        print("----------SENDING!----------------")
+        return chat_completion.choices[0].message.content or ""
+    except Exception as e:
+        logging.error(f"Failed to get response from blackbox: {e}")
+        return "Error processing request."
+
+async def on_set(event):
     user = scratch3.get_user(event.user)
     is_following = user.is_following("LifeCoderBoy")
     
@@ -115,20 +128,20 @@ def on_set(event):
         
         if message.startswith("/"):
             response_message = parse_command(message)
-            conn.set_var("done", "0")
+            run_in_executor(conn.set_var, "done", "0")
             split_string(response_message)
-            conn.set_var("done", "1")
+            run_in_executor(conn.set_var, "done", "1")
             logging.info(f"Command executed: {message} - Response: {response_message}")
             return
 
-        conn.set_var("done", "0")
+        run_in_executor(conn.set_var, "done", "0")
         split_string(f"{event.user}: {message}")
         time.sleep(1)
-        conn.set_var("done", "1")
+        run_in_executor(conn.set_var, "done", "1")
         
         msgs.append({"id": "rpxT3OX", "content": f"{event.user} says: {message}", "role": "user"})
         print("----------OVER HERE----------------")
-        response = post_to_blackbox(msgs)
+        response = await post_to_blackbox(msgs)
         print("----------CAME UP TILL HERE----------------")
         if user.username in bypass_users:
             logging.info(f"{event.user} bypassed the limit.")
@@ -142,9 +155,9 @@ def on_set(event):
                 handle_response(response, "")
             else:
                 logging.info(f"{event.user} reached message limit.")
-                conn.set_var("done", "0")
+                run_in_executor(conn.set_var, "done", "0")
                 split_string(f"{event.user} has reached the limit for Neuron. You can use Neuron again when your limit resets tomorrow. Or, get Neuron PRO (See the instructions). Other people can continue to use Neuron")
-                conn.set_var("done", "1")
+                run_in_executor(conn.set_var, "done", "1")
                 time.sleep(0.5)
         else:
             if event.user not in trials:
@@ -156,10 +169,21 @@ def on_set(event):
                 handle_response(response, " (Free Trial)")
             else:
                 logging.info(f"{event.user} exceeded trial limit.")
-                conn.set_var("done", "0")
+                run_in_executor(conn.set_var, "done", "0")
                 split_string(f"{event.user} has used their Neuron trial. Follow @LifeCoderBoy to send up to 15 messages/day (You'll automatically be able to use Neuron again when you've followed). Other people can continue to use Neuron")
-                conn.set_var("done", "1")
+                run_in_executor(conn.set_var, "done", "1")
                 time.sleep(0.5)
 
-# Start handling Scratch events
-events.start()
+async def main():
+    try:
+        # Start handling Scratch events
+        await events.start()
+    except KeyboardInterrupt:
+        logging.info("Event handling interrupted.")
+    finally:
+        logging.info("Stopping event handling...")
+        await events.stop()
+        logging.info("Event handling stopped.")
+
+if __name__ == "__main__":
+    asyncio.run(main())
