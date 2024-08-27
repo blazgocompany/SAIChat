@@ -71,43 +71,6 @@ def handle_response(response, prefix):
         conn.set_var("done", "1")
     time.sleep(0.5)
 
-def parse_command(command):
-    parts = command.split()
-    if len(parts) < 3:
-        return "Invalid command format. Use /upgrade user <username> <bypass|neuron-followed> or /downgrade user <username> <neuron-unfollowed|neuron-followed>."
-
-    action = parts[0]
-    user = parts[2]
-    status = parts[3]
-    if action == "/reset":
-        if parts[1] == "all":
-            reset_counts()
-            global msgs
-            msgs = []
-        elif parts[1] == "usage":
-            reset_counts()
-        elif parts[1] == "messages":
-            msgs = []
-
-    if action == "/upgrade" and status == "bypass":
-        bypass_users.add(user)
-        logging.info(f"User {user} added to bypass list.")
-        return f"User {user} has been upgraded to bypass list."
-    
-    if action == "/downgrade":
-        if status == "neuron-unfollowed":
-            followed_users.pop(user, None)
-            bypass_users.remove(user)
-            logging.info(f"User {user} downgraded to neuron-unfollowed.")
-            return f"User {user} has been downgraded to neuron-unfollowed."
-        elif status == "neuron-followed":
-            followed_users[user] = 0
-            bypass_users.remove(user)
-            logging.info(f"User {user} downgraded to neuron-followed.")
-            return f"User {user} has been downgraded to neuron-followed."
-    
-    return "Invalid command or status."
-
 @events.event
 def on_set(event):
     user = scratch3.get_user(event.user)
@@ -116,14 +79,6 @@ def on_set(event):
     if event.var == "input":
         message = scratch3.Encoding.decode(event.value)
         
-        if message.startswith("/"):
-            response_message = parse_command(message)
-            conn.set_var("done", "0")
-            split_string(response_message)
-            conn.set_var("done", "1")
-            logging.info(f"Command executed: {message} - Response: {response_message}")
-            return
-
         conn.set_var("done", "0")
         split_string(f"{event.user}: {message}")
         time.sleep(1)
@@ -163,3 +118,8 @@ def on_set(event):
                 split_string(f"{event.user} has used their Neuron trial. Follow @LifeCoderBoy to send up to 15 messages/day (You'll automatically be able to use Neuron again when you've followed). Other people can continue to use Neuron")
                 conn.set_var("done", "1")
                 time.sleep(0.5)
+
+# Keep the script running
+print("Script is running. Press Ctrl+C to stop.")
+while True:
+    time.sleep(1)  # Sleep to prevent high CPU usage
