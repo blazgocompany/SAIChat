@@ -29,7 +29,7 @@ jobs:
         
       - name: Get G4F
         run: | 
-          pip install -U g4f
+          pip install -U g4f[all]
     
       - name: Verify packages
         run: |
