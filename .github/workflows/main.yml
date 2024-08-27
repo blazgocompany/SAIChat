@@ -1,8 +1,11 @@
 name: run main.py
 
 on:
+  push:
+    branches:
+      - main # Adjust to the branch you want to trigger the workflow on
   schedule:
-    - cron: '0 22 * * *' # At 00:00 on Monday
+    - cron: '0 22 * * *' # At 22:00 UTC every day
 
 jobs:
   build:
