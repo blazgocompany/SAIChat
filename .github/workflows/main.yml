@@ -25,7 +25,7 @@ jobs:
 
       - name: Install Python packages
         run: |
-          pip install scratchattach requests
+          pip install scratchattach requests schedule
         
       - name: Get G4F
         run: | 
