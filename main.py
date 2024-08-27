@@ -51,6 +51,7 @@ def post_to_blackbox(msgs):
         model="gpt-4o-mini",
         messages=msgs,
     )    
+    print("----------SENDING!----------------")
     return chat_completion.choices[0].message.content or ""
 
 def handle_response(response, prefix):
@@ -70,49 +71,7 @@ def handle_response(response, prefix):
         conn.set_var("done", "1")
     time.sleep(0.5)
 
-def reset_counts():
-    global trials, followed_users
-    trials = {}
-    followed_users = {}
-    logging.info("Message counts have been reset.")
 
-schedule.every().day.at("00:00").do(reset_counts)
-
-def parse_command(command):
-    parts = command.split()
-    if len(parts) < 3:
-        return "Invalid command format. Use /upgrade user <username> <bypass|neuron-followed> or /downgrade user <username> <neuron-unfollowed|neuron-followed>."
-
-    action = parts[0]
-    user = parts[2]
-    status = parts[3]
-    if action == "/reset":
-        if parts[1] == "all":
-            reset_counts()
-            msgs = {}
-        elif parts[1] == "usage":
-            reset_counts()
-        elif parts[1] == "messages":
-            msgs = {}
-
-    if action == "/upgrade" and status == "bypass":
-        bypass_users.add(user)
-        logging.info(f"User {user} added to bypass list.")
-        return f"User {user} has been upgraded to bypass list."
-    
-    if action == "/downgrade":
-        if status == "neuron-unfollowed":
-            followed_users.pop(user, None)
-            bypass_users.remove(user)
-            logging.info(f"User {user} downgraded to neuron-unfollowed.")
-            return f"User {user} has been downgraded to neuron-unfollowed."
-        elif status == "neuron-followed":
-            followed_users[user] = 0
-            bypass_users.remove(user)
-            logging.info(f"User {user} downgraded to neuron-followed.")
-            return f"User {user} has been downgraded to neuron-followed."
-    
-    return "Invalid command or status."
 
 @events.event
 def on_set(event):
@@ -122,13 +81,7 @@ def on_set(event):
     if event.var == "input":
         message = scratch3.Encoding.decode(event.value)
         
-        if message.startswith("/"):
-            response_message = parse_command(message)
-            conn.set_var("done", "0")
-            split_string(response_message)
-            conn.set_var("done", "1")
-            logging.info(f"Command executed: {message} - Response: {response_message}")
-            return
+        
 
         conn.set_var("done", "0")
         split_string(f"{event.user}: {message}")
@@ -136,8 +89,9 @@ def on_set(event):
         conn.set_var("done", "1")
         
         msgs.append({"id": "rpxT3OX", "content": f"{event.user} says: {message}", "role": "user"})
+        print("----------OVER HERE----------------")
         response = post_to_blackbox(msgs)
-
+        print("----------CAME UP TILL HERE----------------")
         if user.username in bypass_users:
             logging.info(f"{event.user} bypassed the limit.")
             handle_response(response, " PRO")
