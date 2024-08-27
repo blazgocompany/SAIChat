@@ -5,7 +5,6 @@ import string
 import logging
 import os
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from g4f.client import Client
 
 client = Client()
@@ -24,12 +23,21 @@ def gen_7_digit():
 psw = os.getenv('SECRET')
 msgs = [{"id":"rpxT3Os","content":"You are Neuron, an assistant to talk with the group. You are NEURON, not SOME OTHER USER; DO NOT act like you are someone else, your role is the assistant. DO NOT make large responses.", "role":"user"}]
 
-# Setup synchronous environment
-executor = ThreadPoolExecutor()
+session = scratch3.login("LifeCoderBoy", psw)
+conn = session.connect_cloud(1053091510)
+events = scratch3.CloudEvents(1053091510)
 
-def run_in_executor(func, *args):
-    loop = asyncio.get_event_loop()
-    return loop.run_in_executor(executor, func, *args)
+async def post_to_blackbox(msgs):
+    try:
+        chat_completion = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=msgs,
+        )
+        print("----------SENDING!----------------")
+        return chat_completion.choices[0].message.content or ""
+    except Exception as e:
+        logging.error(f"Failed to get response from blackbox: {e}")
+        return "Error processing request."
 
 def split_string(s):
     n = len(s)
@@ -44,24 +52,24 @@ def split_string(s):
             end += remaining_chars
         chunk = s[start:end]
         chunks.append(chunk)
-        run_in_executor(conn.set_var, f"res{i}", scratch3.Encoding.encode(chunk))
+        conn.set_var(f"res{i}", scratch3.Encoding.encode(chunk))
     return chunks
 
 def handle_response(response, prefix):
     response_text = response.split("$@$")[2] if "$@$" in response else response
     if len(response_text) < 1020:
-        run_in_executor(conn.set_var, "done", "0")
+        conn.set_var("done", "0")
         split_string(f"Neuron{prefix}: {response_text}")
-        run_in_executor(conn.set_var, "done", "1")
+        conn.set_var("done", "1")
     else:
         logging.info("Response too long, splitting into chunks")
-        run_in_executor(conn.set_var, "done", "0")
+        conn.set_var("done", "0")
         split_string(f"Neuron{prefix}: {response_text[:len(response_text)//2]}")
-        run_in_executor(conn.set_var, "done", "1")
+        conn.set_var("done", "1")
         time.sleep(2)
-        run_in_executor(conn.set_var, "done", "0")
+        conn.set_var("done", "0")
         split_string(response_text[len(response_text)//2:])
-        run_in_executor(conn.set_var, "done", "1")
+        conn.set_var("done", "1")
     time.sleep(0.5)
 
 def reset_counts():
@@ -107,18 +115,7 @@ def parse_command(command):
     
     return "Invalid command or status."
 
-async def post_to_blackbox(msgs):
-    try:
-        chat_completion = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=msgs,
-        )
-        print("----------SENDING!----------------")
-        return chat_completion.choices[0].message.content or ""
-    except Exception as e:
-        logging.error(f"Failed to get response from blackbox: {e}")
-        return "Error processing request."
-
+@events.event
 async def on_set(event):
     user = scratch3.get_user(event.user)
     is_following = user.is_following("LifeCoderBoy")
@@ -128,16 +125,16 @@ async def on_set(event):
         
         if message.startswith("/"):
             response_message = parse_command(message)
-            run_in_executor(conn.set_var, "done", "0")
+            conn.set_var("done", "0")
             split_string(response_message)
-            run_in_executor(conn.set_var, "done", "1")
+            conn.set_var("done", "1")
             logging.info(f"Command executed: {message} - Response: {response_message}")
             return
 
-        run_in_executor(conn.set_var, "done", "0")
+        conn.set_var("done", "0")
         split_string(f"{event.user}: {message}")
         time.sleep(1)
-        run_in_executor(conn.set_var, "done", "1")
+        conn.set_var("done", "1")
         
         msgs.append({"id": "rpxT3OX", "content": f"{event.user} says: {message}", "role": "user"})
         print("----------OVER HERE----------------")
@@ -155,9 +152,9 @@ async def on_set(event):
                 handle_response(response, "")
             else:
                 logging.info(f"{event.user} reached message limit.")
-                run_in_executor(conn.set_var, "done", "0")
+                conn.set_var("done", "0")
                 split_string(f"{event.user} has reached the limit for Neuron. You can use Neuron again when your limit resets tomorrow. Or, get Neuron PRO (See the instructions). Other people can continue to use Neuron")
-                run_in_executor(conn.set_var, "done", "1")
+                conn.set_var("done", "1")
                 time.sleep(0.5)
         else:
             if event.user not in trials:
@@ -169,9 +166,9 @@ async def on_set(event):
                 handle_response(response, " (Free Trial)")
             else:
                 logging.info(f"{event.user} exceeded trial limit.")
-                run_in_executor(conn.set_var, "done", "0")
+                conn.set_var("done", "0")
                 split_string(f"{event.user} has used their Neuron trial. Follow @LifeCoderBoy to send up to 15 messages/day (You'll automatically be able to use Neuron again when you've followed). Other people can continue to use Neuron")
-                run_in_executor(conn.set_var, "done", "1")
+                conn.set_var("done", "1")
                 time.sleep(0.5)
 
 async def main():
@@ -185,5 +182,6 @@ async def main():
         await events.stop()
         logging.info("Event handling stopped.")
 
+# Run the event loop
 if __name__ == "__main__":
     asyncio.run(main())
