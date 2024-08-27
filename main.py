@@ -3,15 +3,12 @@ import requests
 import random
 import time
 import string
-import schedule
-from datetime import datetime
 import logging
-import threading
 import os
 from g4f.client import Client
 
-
 client = Client()
+
 # Configure logging
 logging.basicConfig(filename='neuron.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -50,7 +47,7 @@ def post_to_blackbox(msgs):
     chat_completion = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=msgs,
-    )    
+    )
     print("----------SENDING!----------------")
     return chat_completion.choices[0].message.content or ""
 
@@ -72,6 +69,41 @@ def handle_response(response, prefix):
     time.sleep(0.5)
 
 
+def parse_command(command):
+    parts = command.split()
+    if len(parts) < 3:
+        return "Invalid command format. Use /upgrade user <username> <bypass|neuron-followed> or /downgrade user <username> <neuron-unfollowed|neuron-followed>."
+
+    action = parts[0]
+    user = parts[2]
+    status = parts[3]
+    if action == "/reset":
+        if parts[1] == "all":
+            reset_counts()
+            msgs = {}
+        elif parts[1] == "usage":
+            reset_counts()
+        elif parts[1] == "messages":
+            msgs = {}
+
+    if action == "/upgrade" and status == "bypass":
+        bypass_users.add(user)
+        logging.info(f"User {user} added to bypass list.")
+        return f"User {user} has been upgraded to bypass list."
+    
+    if action == "/downgrade":
+        if status == "neuron-unfollowed":
+            followed_users.pop(user, None)
+            bypass_users.remove(user)
+            logging.info(f"User {user} downgraded to neuron-unfollowed.")
+            return f"User {user} has been downgraded to neuron-unfollowed."
+        elif status == "neuron-followed":
+            followed_users[user] = 0
+            bypass_users.remove(user)
+            logging.info(f"User {user} downgraded to neuron-followed.")
+            return f"User {user} has been downgraded to neuron-followed."
+    
+    return "Invalid command or status."
 
 @events.event
 def on_set(event):
@@ -81,7 +113,13 @@ def on_set(event):
     if event.var == "input":
         message = scratch3.Encoding.decode(event.value)
         
-        
+        if message.startswith("/"):
+            response_message = parse_command(message)
+            conn.set_var("done", "0")
+            split_string(response_message)
+            conn.set_var("done", "1")
+            logging.info(f"Command executed: {message} - Response: {response_message}")
+            return
 
         conn.set_var("done", "0")
         split_string(f"{event.user}: {message}")
@@ -122,18 +160,6 @@ def on_set(event):
                 split_string(f"{event.user} has used their Neuron trial. Follow @LifeCoderBoy to send up to 15 messages/day (You'll automatically be able to use Neuron again when you've followed). Other people can continue to use Neuron")
                 conn.set_var("done", "1")
                 time.sleep(0.5)
-
-
-
-def run_scheduler():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-# Start the scheduler in a separate thread
-scheduler_thread = threading.Thread(target=run_scheduler)
-scheduler_thread.start()
-
 
 # Start handling Scratch events
 events.start()
