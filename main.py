@@ -8,7 +8,10 @@ from datetime import datetime
 import logging
 import threading
 import os
+from g4f.client import Client
 
+
+client = Client()
 # Configure logging
 logging.basicConfig(filename='neuron.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -44,15 +47,11 @@ def split_string(s):
     return chunks
 
 def post_to_blackbox(msgs):
-    url = "https://www.blackbox.ai/api/chat"
-    data = {"messages": msgs, "id": "rpxT3OX", "previewToken": "null", "userId": "ff285bac-c02e-43a2-9036-3965ed4e9119", "codeModelMode": True, "agentMode": {}, "trendingAgentMode": {}, "isMicMode": False, "isChromeExt": False, "githubToken": "null", "clickedAnswer2": False, "clickedAnswer3": False, "clickedForceWebSearch": False, "visitFromDelta": "null", "webSearchMode": False}
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(url, json=data, headers=headers)
-
-    if "Sources:" in response.text:
-        response = requests.post(url, json=data, headers=headers)
-
-    return response
+    chat_completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=msgs,
+    )    
+    return chat_completion.choices[0].message.content or ""
 
 def handle_response(response, prefix):
     response_text = response.text.split("$@$")[2]
