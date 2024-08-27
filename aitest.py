@@ -1,7 +1,7 @@
 from g4f.client import Client
 
 
-client = Client()
+client = Client() 
 
 chat_completion = client.chat.completions.create(
     model="gpt-4o-mini",
