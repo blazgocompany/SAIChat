@@ -42,4 +42,4 @@ jobs:
       - name: Run main.py
         env:
           SECRET: ${{ secrets.SECRET }} # Pass secret as environment variable
-        run: python main.py
+        run: python aitest.py
