@@ -25,8 +25,12 @@ jobs:
 
       - name: Install Python packages
         run: |
-          pip install scratchattach requests schedule g4f
-          
+          pip install scratchattach requests schedule
+        
+      - name: Get G4F
+        run: | 
+          pip install -U g4f
+    
       - name: Verify packages
         run: |
           pip list
