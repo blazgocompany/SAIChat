@@ -1,5 +1,4 @@
 import scratchattach as scratch3
-from getpass import getpass
 import requests
 import random
 import time
@@ -8,7 +7,7 @@ import schedule
 from datetime import datetime
 import logging
 import threading
-
+import os
 # Configure logging
 logging.basicConfig(filename='neuron.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -20,7 +19,7 @@ bypass_users = {"LifeCoderBoy", "gsumm719"}
 def gen_7_digit():
     return ''.join(random.choice(string.digits) for _ in range(7))
 
-psw = getpass("Enter Scratch password: ")
+psw = os.getenv('SECRET')
 msgs = [{"id":"rpxT3Os","content":"You are Neuron, an assistant to talk with the group. You are NEURON, not SOME OTHER USER; DO NOT act like you are someone else, your role is the assistant. DO NOT make large responses.", "role":"user"}]
 
 session = scratch3.login("LifeCoderBoy", psw)
@@ -170,11 +169,7 @@ def on_set(event):
                 conn.set_var("done", "1")
                 time.sleep(0.5)
 
-def console_command_input():
-    while True:
-        command = input("Enter command: ")
-        response_message = parse_command(command)
-        print(response_message)
+
 
 def run_scheduler():
     while True:
@@ -185,9 +180,6 @@ def run_scheduler():
 scheduler_thread = threading.Thread(target=run_scheduler)
 scheduler_thread.start()
 
-# Start console input handling in a separate thread
-console_thread = threading.Thread(target=console_command_input)
-console_thread.start()
 
 # Start handling Scratch events
 events.start()
