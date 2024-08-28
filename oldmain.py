@@ -24,8 +24,8 @@ psw = os.getenv("SECRET")
 msgs = [{"id":"rpxT3Os","content":"You are Neuron, an assistant to talk with the group. You are NEURON, not SOME OTHER USER; DO NOT act like you are someone else, your role is the assistant. DO NOT make large responses.", "role":"user"}]
 
 session = scratch3.login("LifeCoderBoy", psw)
-conn = session.connect_cloud(1052083585)
-events = scratch3.CloudEvents(1052083585)
+conn = session.connect_cloud(1053091510)
+events = scratch3.CloudEvents(1053091510)
 
 def split_string(s):
     n = len(s)
