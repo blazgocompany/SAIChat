@@ -55,12 +55,14 @@ def post_to_blackbox(msgs):
     return response
 
 def handle_response(response, prefix):
-    response_text = response.text.split("$@$")[2]
+    response_text = response.text.split("$@$")[-1]
     if len(response_text) < 1020:
+        print("Regular Response")
         conn.set_var("done", "0")
         split_string(f"Neuron{prefix}: {response_text}")
         conn.set_var("done", "1")
     else:
+        print("Irregular Response")
         logging.info("Response too long, splitting into chunks")
         conn.set_var("done", "0")
         split_string(f"Neuron{prefix}: {response_text[:len(response_text)//2]}")
@@ -95,10 +97,11 @@ def on_set(event):
         
         msgs.append({"id": "rpxT3OX", "content": f"{event.user} says: {message}", "role": "user"})
         response = post_to_blackbox(msgs)
-
+        print("Request from " + user.username)
         if user.username in bypass_users:
-            logging.info(f"{event.user} bypassed the limit.")
+            print("Bypass: " + user.username)
             handle_response(response, " PRO")
+            print("Done with " + user.username + "'s request")
         elif is_following:
             if user not in followed_users:
                 followed_users[user] = 0
