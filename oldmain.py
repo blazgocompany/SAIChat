@@ -60,8 +60,8 @@ def post_to_blackbox(msgs):
     #     response = requests.post(url, json=data, headers=headers)
 
     # return response
-
-
+    global client
+    print(client)
     chat_completion = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=msgs,
