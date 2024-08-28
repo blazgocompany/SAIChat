@@ -4,25 +4,26 @@ import requests
 import random
 import time
 import string
-import schedule
-from datetime import datetime
-import logging
 import threading
+from datetime import datetime
 import os
-# Configure logging
-logging.basicConfig(filename='neuron.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize global variables
 trials = {}
 followed_users = {}
 bypass_users = {"LifeCoderBoy", "gsumm719"}
+recent_events = {}
 
 def gen_7_digit():
     return ''.join(random.choice(string.digits) for _ in range(7))
 
+# Retrieve secret password from environment variable
 psw = os.getenv("SECRET")
-msgs = [{"id":"rpxT3Os","content":"You are Neuron, an assistant to talk with the group. You are NEURON, not SOME OTHER USER; DO NOT act like you are someone else, your role is the assistant. DO NOT make large responses.", "role":"user"}]
 
+# Initialize messages
+msgs = [{"id": "rpxT3Os", "content": "You are Neuron, an assistant to talk with the group. You are NEURON, not SOME OTHER USER; DO NOT act like you are someone else, your role is the assistant. DO NOT make large responses.", "role": "user"}]
+
+# Login and connect to Scratch
 session = scratch3.login("LifeCoderBoy", psw)
 conn = session.connect_cloud(1053091510)
 events = scratch3.CloudEvents(1053091510)
@@ -49,6 +50,7 @@ def post_to_blackbox(msgs):
     headers = {"Content-Type": "application/json"}
     response = requests.post(url, json=data, headers=headers)
 
+    # Retry if response contains "Sources:"
     if "Sources:" in response.text:
         response = requests.post(url, json=data, headers=headers)
 
@@ -63,7 +65,7 @@ def handle_response(response, prefix):
         conn.set_var("done", "1")
     else:
         print("Irregular Response")
-        logging.info("Response too long, splitting into chunks")
+        print("Response too long, splitting into chunks")
         conn.set_var("done", "0")
         split_string(f"Neuron{prefix}: {response_text[:len(response_text)//2]}")
         conn.set_var("done", "1")
@@ -73,22 +75,24 @@ def handle_response(response, prefix):
         conn.set_var("done", "1")
     time.sleep(0.5)
 
-
 @events.event
 def on_set(event):
     user = scratch3.get_user(event.user)
     is_following = user.is_following("LifeCoderBoy")
     
+    # Create a unique key for each event based on user and message
+    event_key = (event.user, scratch3.Encoding.decode(event.value))
+
+    # Check if this event has been processed recently
+    if event_key in recent_events:
+        print(f"Duplicate event detected for user {event.user}. Ignoring.")
+        return  # Exit if the event is a duplicate
+    
+    # Record the event in the cache
+    recent_events[event_key] = datetime.now()
+
     if event.var == "input":
         message = scratch3.Encoding.decode(event.value)
-        
-        if message.startswith("/"):
-            response_message = parse_command(message)
-            conn.set_var("done", "0")
-            split_string(response_message)
-            conn.set_var("done", "1")
-            logging.info(f"Command executed: {message} - Response: {response_message}")
-            return
 
         conn.set_var("done", "0")
         split_string(f"{event.user}: {message}")
@@ -110,7 +114,7 @@ def on_set(event):
                 followed_users[user] += 1
                 handle_response(response, "")
             else:
-                logging.info(f"{event.user} reached message limit.")
+                print(f"{event.user} reached message limit.")
                 conn.set_var("done", "0")
                 split_string(f"{event.user} has reached the limit for Neuron. You can use Neuron again when your limit resets tomorrow. Or, get Neuron PRO (See the instructions). Other people can continue to use Neuron")
                 conn.set_var("done", "1")
@@ -120,26 +124,29 @@ def on_set(event):
                 trials[event.user] = 0
 
             if trials[event.user] < 1 or event.user == "LifeCoderBoy":
-                logging.info(f"{event.user} used a free trial.")
+                print(f"{event.user} used a free trial.")
                 trials[event.user] += 1
                 handle_response(response, " (Free Trial)")
             else:
-                logging.info(f"{event.user} exceeded trial limit.")
+                print(f"{event.user} exceeded trial limit.")
                 conn.set_var("done", "0")
                 split_string(f"{event.user} has used their Neuron trial. Follow @LifeCoderBoy to send up to 15 messages/day (You'll automatically be able to use Neuron again when you've followed). Other people can continue to use Neuron")
                 conn.set_var("done", "1")
                 time.sleep(0.5)
 
+    # Clean up old entries in the cache
+    current_time = datetime.now()
+    for key, timestamp in list(recent_events.items()):
+        if (current_time - timestamp).total_seconds() > 60:  # Adjust the time window as needed
+            del recent_events[key]
 
 def run_scheduler():
     while True:
-        schedule.run_pending()
         time.sleep(1)
 
 # Start the scheduler in a separate thread
 scheduler_thread = threading.Thread(target=run_scheduler)
 scheduler_thread.start()
-
 
 # Start handling Scratch events
 events.start()
