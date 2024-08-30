@@ -70,7 +70,7 @@ def process_image(url, downsample_factor=4):
     new_height = height // downsample_factor
     
     # Resize the image to reduce resolution
-    image = image.resize((new_width, new_height), Image.ANTIALIAS)
+    image = image.resize((new_width, new_height), Image.LANCZOS)
     
     # Get new image dimensions
     width, height = image.size
