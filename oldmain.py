@@ -128,19 +128,21 @@ def process_image(url, downsample_factor=4):
     
 def split_num(s):
     n = len(s)
-    chunk_size = n // 8
-    remaining_chars = n % 8
+    chunk_size = n // 7
+    remaining_chars = n % 7
     chunks = []
 
-    for i in range(8):
+    for i in range(7):  # Iterate from 0 to 6 to handle res1 to res7
         start = i * chunk_size
         end = start + chunk_size
-        if i == 7:  # last chunk, add remaining chars
+        if i == 6:  # last chunk, add remaining chars
             end += remaining_chars
         chunk = s[start:end]
         chunks.append(chunk)
-        conn.set_var(f"res{i}", int(chunk))
+        conn.set_var(f"res{i + 1}", int(chunk))  # Set res1 to res7
     return chunks
+
+
 def split_string(s):
     n = len(s)
     chunk_size = n // 8
