@@ -19,7 +19,7 @@ import colorsys
 trials = {}
 followed_users = {}
 bypass_users = {"LifeCoderBoy", "gsumm719"}
-recent_events = {}
+
 
 def gen_7_digit():
     return ''.join(random.choice(string.digits) for _ in range(7))
@@ -202,17 +202,6 @@ def handle_response(response, prefix):
 def on_set(event):
     user = scratch3.get_user(event.user)
     is_following = user.is_following("LifeCoderBoy")
-    
-    # Create a unique key for each event based on user and message
-    event_key = (event.user, scratch3.Encoding.decode(event.value))
-
-    # Check if this event has been processed recently
-    if event_key in recent_events:
-        print(f"Duplicate event detected for user {event.user}. Ignoring.")
-        return  # Exit if the event is a duplicate
-    
-    # Record the event in the cache
-    recent_events[event_key] = datetime.now()
 
     if event.var == "input":
         message = scratch3.Encoding.decode(event.value)
@@ -276,9 +265,7 @@ def on_set(event):
 
     # Clean up old entries in the cache
     current_time = datetime.now()
-    for key, timestamp in list(recent_events.items()):
-        if (current_time - timestamp).total_seconds() > 60:  # Adjust the time window as needed
-            del recent_events[key]
+
 
 def run_scheduler():
     while True:
