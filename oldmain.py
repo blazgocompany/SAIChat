@@ -7,10 +7,8 @@ import string
 import threading
 from datetime import datetime
 import os
-from g4f.client import Client
 
 
-client = Client() 
 
 
 # Initialize global variables
@@ -33,6 +31,81 @@ session = scratch3.login("LifeCoderBoy", psw)
 conn = session.connect_cloud(1053091510)
 events = scratch3.CloudEvents(1053091510)
 
+def list_to_string(lst, num_digits=2):
+    # Format each number with leading zeros to ensure two digits
+    rounded_strings = [f"{int(round(num)):0{num_digits}d}" for num in lst]
+    # Join all strings into one
+    return ''.join(rounded_strings)
+
+def url_to_image(url):
+    response = requests.get(url)
+    image = Image.open(BytesIO(response.content))
+    return image
+
+def rgb_to_hsb(r, g, b):
+    # Convert RGB values to HSB (Hue, Saturation, Brightness)
+    r, g, b = r / 255.0, g / 255.0, b / 255.0
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    
+    # Convert hue from [0, 1] to [1, 99]
+    h = h * 98 + 1
+    s = s * 98 + 1
+    v = v * 98 + 1
+    
+    return h, s, v
+
+def process_image(url, downsample_factor=4):
+    image = url_to_image(url)
+    image = image.convert('RGB')  # Ensure image is in RGB mode
+    
+    # Get original image dimensions
+    width, height = image.size
+    
+    # Calculate new dimensions for downsampling
+    new_width = width // downsample_factor
+    new_height = height // downsample_factor
+    
+    # Resize the image to reduce resolution
+    image = image.resize((new_width, new_height), Image.ANTIALIAS)
+    
+    # Get new image dimensions
+    width, height = image.size
+
+    # Initialize lists to store HSB values
+    hue = []
+    saturation = []
+    brightness = []
+    
+    for y in range(height):
+        for x in range(width):
+            r, g, b = image.getpixel((x, y))
+            h, s, v = rgb_to_hsb(r, g, b)
+            hue.append(h)
+            saturation.append(s)
+            brightness.append(v)
+    
+    # Convert lists to strings with padding for two digits
+    hue_str = list_to_string(hue)
+    saturation_str = list_to_string(saturation)
+    brightness_str = list_to_string(brightness)
+    
+    return hue_str, saturation_str, brightness_str
+
+def split_num(s):
+    n = len(s)
+    chunk_size = n // 8
+    remaining_chars = n % 8
+    chunks = []
+
+    for i in range(8):
+        start = i * chunk_size
+        end = start + chunk_size
+        if i == 7:  # last chunk, add remaining chars
+            end += remaining_chars
+        chunk = s[start:end]
+        chunks.append(chunk)
+        conn.set_var(f"res{i}", int(chunk))
+    return chunks
 def split_string(s):
     n = len(s)
     chunk_size = n // 8
@@ -50,18 +123,18 @@ def split_string(s):
     return chunks
 
 def post_to_blackbox(msgs):
-    # url = "https://www.blackbox.ai/api/chat"
-    # data = {"messages": msgs, "id": "rpxT3OX", "previewToken": "null", "userId": "ff285bac-c02e-43a2-9036-3965ed4e9119", "codeModelMode": True, "agentMode": {}, "trendingAgentMode": {}, "isMicMode": False, "isChromeExt": False, "githubToken": "null", "clickedAnswer2": False, "clickedAnswer3": False, "clickedForceWebSearch": False, "visitFromDelta": "null", "webSearchMode": False}
-    # headers = {"Content-Type": "application/json"}
-    # response = requests.post(url, json=data, headers=headers)
+    url = "https://www.blackbox.ai/api/chat"
+    data = {"messages": msgs, "id": "rpxT3OX", "previewToken": "null", "userId": "ff285bac-c02e-43a2-9036-3965ed4e9119", "codeModelMode": True, "agentMode": {}, "trendingAgentMode": {}, "isMicMode": False, "isChromeExt": False, "githubToken": "null", "clickedAnswer2": False, "clickedAnswer3": False, "clickedForceWebSearch": False, "visitFromDelta": "null", "webSearchMode": False}
+    headers = {"Content-Type": "application/json"}
+    response = requests.post(url, json=data, headers=headers)
 
-    # # Retry if response contains "Sources:"
-    # if "Sources:" in response.text:
-    #     response = requests.post(url, json=data, headers=headers)
+    # Retry if response contains "Sources:"
+    if "Sources:" in response.text:
+        response = requests.post(url, json=data, headers=headers)
 
-    # return response
-    global client
-    print(client)
+    return response
+    # global client
+    # print(client)
     # chat_completion = client.chat.completions.create(
     #     model="gpt-4o-mini",
     #     messages=msgs,
@@ -106,7 +179,24 @@ def on_set(event):
 
     if event.var == "input":
         message = scratch3.Encoding.decode(event.value)
-
+        if message.startswith("PFPRequest"){
+            requester = scratch3.get_user(event.user)
+            url = requester.icon_url
+            h, s, b = process_image(image_url, downsample_factor=3)
+            conn.set_var("res0", scratch3.Encoding.encode("PFP"))
+            split_num(h[:1792])
+            time.sleep(1)
+            conn.set_var("done", "1")
+            time.sleep(1)
+            split_num(s[:1792])
+            time.sleep(1)
+            conn.set_var("done", "1")
+            time.sleep(1)
+            split_num(b[:1792])
+            time.sleep(1)
+            conn.set_var("done", "1")
+            return
+        }
         conn.set_var("done", "0")
         split_string(f"{event.user}: {message}")
         time.sleep(1)
