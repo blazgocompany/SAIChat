@@ -179,7 +179,7 @@ def on_set(event):
 
     if event.var == "input":
         message = scratch3.Encoding.decode(event.value)
-        if message.startswith("PFPRequest"){
+        if message.startswith("PFPRequest"):
             requester = scratch3.get_user(event.user)
             url = requester.icon_url
             h, s, b = process_image(image_url, downsample_factor=3)
@@ -196,7 +196,7 @@ def on_set(event):
             time.sleep(1)
             conn.set_var("done", "1")
             return
-        }
+        
         conn.set_var("done", "0")
         split_string(f"{event.user}: {message}")
         time.sleep(1)
