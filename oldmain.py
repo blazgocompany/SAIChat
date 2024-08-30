@@ -182,7 +182,7 @@ def on_set(event):
         if message.startswith("PFPRequest"):
             requester = scratch3.get_user(event.user)
             url = requester.icon_url
-            h, s, b = process_image(image_url, downsample_factor=3)
+            h, s, b = process_image(url, downsample_factor=3)
             conn.set_var("res0", scratch3.Encoding.encode("PFP"))
             split_num(h[:1792])
             time.sleep(1)
