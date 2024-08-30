@@ -220,7 +220,7 @@ def on_set(event):
             requester = scratch3.get_user(event.user)
             url = requester.icon_url
             h, s, b = process_image(url, downsample_factor=3)
-            conn.set_var("res0", scratch3.Encoding.encode("PFP"))
+            conn.set_var("res0", 523252)
             split_num(h[:1792])
             time.sleep(1)
             conn.set_var("done", "1")
