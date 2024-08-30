@@ -25,7 +25,7 @@ jobs:
         
       - name: Get G4F
         run: | 
-          pip install -U g4f[all]
+          pip install -U freeGPT
     
       - name: Verify packages
         run: |
@@ -37,4 +37,4 @@ jobs:
       - name: Run main.py
         env:
           SECRET: ${{ secrets.SECRET }} # Pass secret as environment variable
-        run: python oldmain.py
+        run: python aitest.py
