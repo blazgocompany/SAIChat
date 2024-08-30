@@ -22,10 +22,6 @@ jobs:
       - name: Install Python packages
         run: |
           pip install scratchattach requests schedule
-        
-      - name: Get G4F
-        run: | 
-          pip install -U freeGPT
     
       - name: Verify packages
         run: |
@@ -37,4 +33,4 @@ jobs:
       - name: Run main.py
         env:
           SECRET: ${{ secrets.SECRET }} # Pass secret as environment variable
-        run: python aitest.py
+        run: python oldmain.py
