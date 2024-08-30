@@ -21,14 +21,14 @@ jobs:
 
       - name: Install Python packages
         run: |
-          pip install scratchattach requests schedule
+          pip install scratchattach requests schedule pillow
     
       - name: Verify packages
         run: |
           pip list
           pip show scratchattach
           pip show requests
-          pip show g4f
+          pip show pillow
 
       - name: Run main.py
         env:
