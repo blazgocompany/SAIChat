@@ -7,7 +7,7 @@ import string
 import threading
 from datetime import datetime
 import os
-from PIL import Image
+from PIL import Image, ImageSequence
 import requests
 from io import BytesIO
 import colorsys
