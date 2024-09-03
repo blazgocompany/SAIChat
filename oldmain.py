@@ -60,11 +60,11 @@ def rgb_to_hsb(r, g, b):
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
     
     # Convert hue to degrees [0, 360]
-    h = h * 360
+    h = h * 99
     
     # Convert saturation and brightness to percentage [0, 100]
-    s = s * 100
-    v = v * 100
+    s = s * 99
+    v = v * 99
     
     return h, s, v
 
