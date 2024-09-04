@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Python packages
         run: |
-          pip install scratchattach requests schedule pillow
+          pip install scratchattach requests schedule pillow pyautogui
     
       - name: Verify packages
         run: |
@@ -33,4 +33,10 @@ jobs:
       - name: Run main.py
         env:
           SECRET: ${{ secrets.SECRET }} # Pass secret as environment variable
-        run: python oldmain.py
+        run: python ss.py
+        
+      - name: Upload screenshot artifact
+        uses: actions/upload-artifact@v3
+        with:
+         name: screenshot
+         path: screenshot_*.png
