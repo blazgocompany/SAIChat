@@ -35,8 +35,15 @@ jobs:
           SECRET: ${{ secrets.SECRET }} # Pass secret as environment variable
         run: python ss.py
         
-      - name: Upload screenshot artifact
-        uses: actions/upload-artifact@v3
-        with:
-         name: screenshot
-         path: screenshot_*.png
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+      - name: Commit and push changes
+        run: |
+          git add screenshot_*.png
+          git commit -m 'Add screenshot from GitHub Actions'
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
