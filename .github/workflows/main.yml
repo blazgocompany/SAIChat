@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Python packages
         run: |
-          pip install scratchattach requests schedule pillow pyautogui
+          pip install scratchattach requests schedule pillow pyautogui opencv-python
     
       - name: Verify packages
         run: |
@@ -42,7 +42,7 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git add screenshot_*.png
+          git add captured_*.png
           git commit -m 'Add screenshot from GitHub Actions'
           git push
         env:
