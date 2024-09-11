@@ -1,14 +1,25 @@
-import pyautogui
-from datetime import datetime
+import cv2
 
-# Define the file name with a timestamp
-timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-filename = f'screenshot_{timestamp}.png'
+# Open the webcam (0 is usually the default camera)
+cap = cv2.VideoCapture(0)
 
-# Take the screenshot
-screenshot = pyautogui.screenshot()
+# Check if the camera opened successfully
+if not cap.isOpened():
+    print("Error: Could not open camera.")
+    exit()
 
-# Save the screenshot
-screenshot.save(filename)
+# Capture a single frame
+ret, frame = cap.read()
 
-print(f'Screenshot saved as {filename}')
+if ret:
+    # Save the captured frame
+    cv2.imwrite('captured_image.jpg', frame)
+    print("Image captured and saved as 'captured_image.jpg'.")
+else:
+    print("Error: Could not capture image.")
+
+# Release the camera
+cap.release()
+
+# Destroy any OpenCV windows
+cv2.destroyAllWindows()
