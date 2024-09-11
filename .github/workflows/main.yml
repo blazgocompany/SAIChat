@@ -42,7 +42,7 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git add captured_*.jpg
+          git add captured_image.jpg
           git commit -m 'Add screenshot from GitHub Actions'
           git push
         env:
